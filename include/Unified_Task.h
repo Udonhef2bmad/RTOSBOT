@@ -12,7 +12,7 @@
 
 
 
-struct Task_Vars
+struct Task_Information
 {
     const char *name = "DefaultName";
     uint32_t usStackDepth = 64;
@@ -24,20 +24,22 @@ struct Task_Vars
 struct Task_Constraints
 {
     /// following time constraints apply to task function
-    TickType_t xFirst;    /// [O] First activation
-    TickType_t xWcet;     /// [C] Worst-case execution time //unused?//
-    TickType_t xPeriod;   /// [T] Period
-    TickType_t xDeadline; /// [D] Deadline
+    TickType_t xFirst;    // [O] First activation
+    TickType_t xWcet;     // [C] Worst-case execution time //unused?//
+    TickType_t xPeriod;   // [T] Period
+    TickType_t xDeadline; // [D] Deadline
 };
 
 struct Unified_Task
 {
-    struct Task_Constraints cnst;
-    struct Task_Vars vars;
-    void (*func)(void *);
-    void *pvParameters;
+    struct Task_Constraints *cnst;
+    struct Task_Information *info;
+    void (*uSetup)(void *);//called once before loop
+    void (*uLoop)(void *);//loops infinitely
+    void *param;
 };
 
-void taskLoop(void *pvParameters);
+//void taskLoop(void *pvParameters);
+void CreateTask(struct Unified_Task *uTask);
 
 #endif
