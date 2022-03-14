@@ -5,9 +5,13 @@
 /// check an update deadline
 bool hasDeadlinePassed(TickType_t StartDeadline, TickType_t Deadline)
 {
-    Serial.printf("Task took %u ms to execute\n", (xTaskGetTickCount() - StartDeadline)*portTICK_PERIOD_MS);
-    Serial.printf("Deadline is %u ms behind\n", (Deadline - (xTaskGetTickCount() - StartDeadline))*portTICK_PERIOD_MS);
-    
+    Serial.print("Task took ");
+    Serial.print((xTaskGetTickCount() - StartDeadline)*portTICK_PERIOD_MS);
+    Serial.println("ms to execute");
+    Serial.print("Deadline is ");
+    Serial.print((Deadline - (xTaskGetTickCount() - StartDeadline))*portTICK_PERIOD_MS);
+    Serial.println("ms behind");
+
     if (xTaskGetTickCount() - StartDeadline < Deadline)//safe comparison
     {
         return false;
@@ -19,14 +23,18 @@ void taskLoop(void *pvParameters)
 {
     // Cast class (came up with that, no idea if this is good practice)
     struct Unified_Task *uTask = (struct Unified_Task *)pvParameters;
-    struct Task_Constraints cnst = uTask->cnst;
+    struct Task_Constraints *cnst = uTask->cnst;
 
     TickType_t DeadlineStart; /// keep track of periodicity for vTaskDelayUntil
     TickType_t xLastPeriod;/// keep track of deadline start
+    
+    //run setup function once
+    Serial.print("Task initialised : Running setup\n");
+    (*uTask).uSetup(uTask->param);
+    
     // Wait for first activation
-
-    vTaskDelay(cnst.xFirst);
-    Serial.printf("task active\n");
+    vTaskDelay((*cnst).xFirst);
+    Serial.print("Task Active : Running loop\n");
 
     // Initialise the xLastPeriod variable with the current time.
     xLastPeriod = xTaskGetTickCount();
@@ -36,18 +44,23 @@ void taskLoop(void *pvParameters)
         DeadlineStart = xTaskGetTickCount();
 
         // Run looped function
-        Serial.printf("executing task\n");
-        (*uTask).func(uTask->pvParameters);
+        Serial.print("\nExecuting task\n");
+        (*uTask).uLoop(uTask->param);
+        Serial.print("Done executing task\n");
+
+        //stack size check (use are the "tip" of the function to check limits)
+        //uxTaskGetStackHighWaterMark(NULL);
 
         // Check for deadline
-        Serial.printf("DeadlineStart : %d\n", DeadlineStart);
-        if (hasDeadlinePassed(DeadlineStart, cnst.xDeadline))
+        Serial.print("DeadlineStart :");
+        Serial.println(DeadlineStart);
+        if (hasDeadlinePassed(DeadlineStart, (*cnst).xDeadline))
         {
             break; // Deadline has arrived. May god have mercy
         }
 
         // wait for period
-        vTaskDelayUntil(&xLastPeriod, cnst.xPeriod); 
+        vTaskDelayUntil(&xLastPeriod, (*cnst).xPeriod); 
     }
 
     while (1)
@@ -56,4 +69,16 @@ void taskLoop(void *pvParameters)
         Serial.println("error");
         delay(1000);
     }
+}
+
+
+void CreateTask(struct Unified_Task *uTask)
+{
+        xTaskCreate(
+        taskLoop,                   //Task function.
+        uTask->info->name,          //name of task.
+        uTask->info->usStackDepth,  //Stack size of task
+        uTask,                      //parameter of the task
+        uTask->info->uxPriority,    //priority of the task
+        uTask->info->pvCreatedTask);//Task handle to keep track of created task
 }
