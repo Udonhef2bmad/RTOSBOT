@@ -2,6 +2,7 @@
 
 namespace // hidden
 {
+    bool TASKDEBUG = true;
 
     // pin definition for ld293d H-bridge-driven motor
     struct Motor
@@ -20,9 +21,15 @@ namespace // hidden
     {
         struct Motor **motor;        // array of two motors
         uint32_t inputMin, inputMax; // input range
-        uint32_t inputMean;          // calculated from input range
-        uint8_t resolution; // pwm resolution // 1-16 bits // applied to both motors
+        uint32_t inputMean;              // calculated from input range
+        uint8_t resolution;          // pwm resolution // 1-16 bits // applied to both motors
         double freq;
+
+        uint32_t *s_MotorOutputs;         // shared dual uint32_t array that holds dual motor output speeds
+        SemaphoreHandle_t m_MotorOutputs; // mutex for s_SensorReady
+
+        char *s_DisplayContent;             // shared array that holds logging info to be displayed
+        SemaphoreHandle_t m_DisplayContent; // mutex for s_SensorReady
     };
 
     // update dual motor speeds and directions
@@ -39,36 +46,44 @@ namespace // hidden
         digitalWrite(motor[1]->dir2, !m2_dir);
 
         // set pwm control
-        ledcWrite(motor[0]->channel, abs((m1_input) - (param->inputMean)));
-        ledcWrite(motor[1]->channel, abs((m2_input) - (param->inputMean)));
+        ledcWrite(motor[0]->channel, 2*abs((m1_input) - (param->inputMean)));
+        ledcWrite(motor[1]->channel, 2*abs((m2_input) - (param->inputMean)));
 
-        Serial.print("direction\n[");
-        Serial.print(m1_dir);
-        Serial.print(":");
-        Serial.print(m2_dir);
-        Serial.print("]\n");
-        Serial.print("[");
-        Serial.print(!m1_dir);
-        Serial.print(":");
-        Serial.print(!m2_dir);
-        Serial.print("]\n");
-        Serial.print("speed\n[");
-        Serial.print(abs((m1_input) - (param->inputMean)));
-        Serial.print(":");
-        Serial.print(abs((m2_input) - (param->inputMean)));
-        Serial.print("]\n");
-        Serial.print("speed%\n[");
-        Serial.print(abs((m1_input) - (param->inputMean))/(param->inputMax-param->inputMin));
-        Serial.print(":");
-        Serial.print(abs((m2_input) - (param->inputMean))/(param->inputMax-param->inputMin));
-        Serial.print("]\n");
+        if (TASKDEBUG)
+        {
+            Serial.print("\ninput\n[");
+            Serial.print(m1_input);
+            Serial.print(":");
+            Serial.print(m2_input);
+            Serial.print("]\n");
+            Serial.print("direction\n[");
+            Serial.print(m1_dir);
+            Serial.print(":");
+            Serial.print(m2_dir);
+            Serial.print("]\n");
+            /*Serial.print("[");
+            Serial.print(!m1_dir);
+            Serial.print(":");
+            Serial.print(!m2_dir);
+            Serial.print("]\n");*/
+            Serial.print("speed\n[");
+            Serial.print(2*abs((m1_input) - (param->inputMean)));
+            Serial.print(":");
+            Serial.print(2*abs((m2_input) - (param->inputMean)));
+            Serial.print("]\n");
+            Serial.print("speed%\n[");
+            Serial.print(2*abs((m1_input) - (param->inputMean)) / (param->inputMax - param->inputMin));
+            Serial.print(":");
+            Serial.print(2*abs((m2_input) - (param->inputMean)) / (param->inputMax - param->inputMin));
+            Serial.print("]\n");
+        }
     }
 
     void getParameters(struct Param *param)
     {
         // set parameters here
         param->inputMin = 0;
-        param->inputMax = 255;                                    // 16 bit resolution -> 65536 possible values
+        param->inputMax = 255;                                      // 16 bit resolution -> 65536 possible values
         param->inputMean = (param->inputMin + param->inputMax) / 2; // stored here as to avoid calculation every loop
         param->resolution = 8;
         param->freq = 4000;
@@ -78,7 +93,7 @@ namespace // hidden
         param->motor =
             (struct Motor **)malloc(2 * (sizeof *(param->motor)));
         struct Motor *motor;
-        
+
         // first motor
         motor = (struct Motor *)malloc((sizeof *(motor)));
         motor->dir1 = 32;
@@ -119,8 +134,6 @@ namespace // hidden
         info->pvCreatedTask = NULL;
     }
 
-    uint32_t m1_input;
-    uint32_t m2_input;
     void uSetup(void *pvParameters)
     {
         struct Param *param = (struct Param *)pvParameters;
@@ -132,7 +145,7 @@ namespace // hidden
         pinMode(motor[0]->pwm, OUTPUT);
         ledcSetup(motor[0]->channel, motor[0]->freq, motor[0]->resolution);
         ledcAttachPin(motor[0]->pwm, motor[0]->channel);
-        
+
         // second motor
         pinMode(motor[1]->dir1, OUTPUT);
         pinMode(motor[1]->dir2, OUTPUT);
@@ -140,32 +153,33 @@ namespace // hidden
         ledcSetup(motor[1]->channel, motor[1]->freq, motor[1]->resolution);
         ledcAttachPin(motor[1]->pwm, motor[1]->channel);
 
-        m1_input = param->inputMean;
-        m2_input = param->inputMean;
+        param->s_MotorOutputs[0] = param->inputMean;
+        param->s_MotorOutputs[1] = param->inputMean;
     }
 
     void uLoop(void *pvParameters)
     {
         struct Param *param = (struct Param *)pvParameters;
-        m1_input +=10;
-        m2_input -=50;
-        m1_input = m1_input%(param->inputMax-param->inputMin);
-        m2_input = m2_input%(param->inputMax-param->inputMin);
-        Serial.print("[");
-        Serial.print(m1_input);
-        Serial.print(":");
-        Serial.print(m2_input);
-        Serial.print("]\n");
-        dualDrive_update(param, m1_input, m2_input);
+        param->s_MotorOutputs[0] = (param->s_MotorOutputs[0]+5)%255;
+        param->s_MotorOutputs[1] = (param->s_MotorOutputs[1]-5)%255;
+        dualDrive_update(param, param->s_MotorOutputs[0], param->s_MotorOutputs[1]);
     }
 }
 
-struct Unified_Task *InitMotorTask()
+struct Unified_Task *InitMotorTask(
+    uint32_t *s_MotorOutputs, SemaphoreHandle_t m_MotorOutputs,
+    char *s_DisplayContent, SemaphoreHandle_t m_DisplayContent)
 {
     struct Unified_Task *uTask = (struct Unified_Task *)malloc(sizeof *uTask);
     struct Task_Information *info = (struct Task_Information *)malloc(sizeof *info);
     struct Task_Constraints *cnst = (struct Task_Constraints *)malloc(sizeof *cnst);
     struct Param *param = (struct Param *)malloc(sizeof *param);
+
+    // init shared variables here
+    param->s_MotorOutputs = s_MotorOutputs;
+    param->m_MotorOutputs = m_MotorOutputs;
+    param->s_DisplayContent = s_DisplayContent;
+    param->m_DisplayContent = m_DisplayContent;
 
     // init setup funtion
     uTask->uSetup = uSetup;
@@ -180,8 +194,6 @@ struct Unified_Task *InitMotorTask()
     uTask->cnst = cnst;
     getParameters(param);
     uTask->param = param;
-    Serial.print("Done building\n");
-        delay(1000);
 
     return uTask;
 }
