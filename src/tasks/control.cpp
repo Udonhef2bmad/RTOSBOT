@@ -24,16 +24,16 @@ namespace // hidden
     void getParameters(struct Param *param)
     {
         // set parameters here
-        param->sensor_threshold = 10;
+        param->sensor_threshold = 15;
     }
 
     void getConstraints(struct Task_Constraints *cnst)
     {
         // set constraints here
-        cnst->xFirst = 500;                           /// [O] First activation
-        cnst->xWcet = 0;                            /// [C] Worst-case execution time //unused?//
-        cnst->xPeriod = 10 / portTICK_PERIOD_MS;  /// [T] Period
-        cnst->xDeadline = 500 / portTICK_PERIOD_MS; /// [D] Deadline
+        cnst->xFirst = 50       / portTICK_PERIOD_MS; /// [O] First activation
+        cnst->xWcet = 5         / portTICK_PERIOD_MS; /// [C] Worst-case execution time //unused?//
+        cnst->xPeriod = 50      / portTICK_PERIOD_MS; /// [T] Period
+        cnst->xDeadline = 10    / portTICK_PERIOD_MS; /// [D] Deadline
     }
 
     void getInformation(struct Task_Information *info)
@@ -42,7 +42,7 @@ namespace // hidden
         info->name = "CommandTask";
         info->usStackDepth = 1000;
         info->pvParameters = (void *)1;
-        info->uxPriority = tskIDLE_PRIORITY;
+        info->uxPriority = 2;
         info->pvCreatedTask = NULL;
     }
 
@@ -64,18 +64,46 @@ namespace // hidden
             *(param->s_SensorReady) = false;//reset flag
 
             if (TASKDEBUG)
+            {
             Serial.print("Running Control\n");
-            Serial.println(param->s_DistanceArray[0]);
-            Serial.println(param->s_DistanceArray[1]);
-            Serial.println(param->s_DistanceArray[2]);
+            Serial.print("[");
+            Serial.print(param->s_DistanceArray[0]);
+            Serial.print(", ");
+            Serial.print(param->s_DistanceArray[1]);
+            Serial.print(", ");
+            Serial.print(param->s_DistanceArray[2]);
+            Serial.print("]");
+            }
             unsigned long d_array[3];
 
             d_array[0] = param->s_DistanceArray[0];
             d_array[1] = param->s_DistanceArray[1];
             d_array[2] = param->s_DistanceArray[2];
+            
+            param->s_MotorOutputs[0] = 255;
+            param->s_MotorOutputs[1] = 255;
+
+            //left sensor
+            if(d_array[0] < param->sensor_threshold)
+            {
+                param->s_MotorOutputs[1] = 0; //enable opposite motor
+            }
+
+            //right sensor
+            if(d_array[2] < param->sensor_threshold)
+            {
+                param->s_MotorOutputs[0] = 0; //enable opposite motor
+            }
+
+            //middle sensor
+            if(d_array[1] < param->sensor_threshold)
+            {
+                param->s_MotorOutputs[0] = 0;
+                param->s_MotorOutputs[1] = 0;
+            }
 
             //if any sensor is within the theshold; engage evasive maneuvers, aka reverse
-            if(
+            /*if(
             d_array[0] < param->sensor_threshold ||
             d_array[1] < param->sensor_threshold ||
             d_array[2] < param->sensor_threshold)
@@ -87,12 +115,16 @@ namespace // hidden
             else // otherwise go forward. motor speed is based on side sensor's value
             {
                 //map [0-350] to [0-255]
-                param->s_MotorOutputs[0] = map(d_array[0], 0, 350, 0, 255);
-                param->s_MotorOutputs[1] = map(d_array[2], 0, 350, 0, 255);
-            }
+                //cap 
+                //param->s_MotorOutputs[0] = map(d_array[0], 0, 350, 0, 255);
+                //param->s_MotorOutputs[1] = map(d_array[2], 0, 350, 0, 255);
+                param->s_MotorOutputs[0] = 255;
+                param->s_MotorOutputs[1] = 255;
+            }*/
         }
         else
         {
+            if (TASKDEBUG)
             Serial.print("Skipping Control\n");
         }
 

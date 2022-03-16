@@ -8,7 +8,7 @@ namespace // hidden
         int test;
     };
 
-
+ 
     void getParameters(struct Param *param)
     {
         //set parameters here

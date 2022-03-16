@@ -2,7 +2,7 @@
 
 namespace // hidden
 {
-    bool TASKDEBUG = false;
+    bool TASKDEBUG = true;
 
     // pin definition for HC-SR04 ultrasound sensor
     struct Distance_Sensor
@@ -17,18 +17,15 @@ namespace // hidden
     // perform an ultrasound measurement
     unsigned long Measure(struct Distance_Sensor *sensor)
     {
-        Serial.print("a\n");
         digitalWrite(sensor->trigPin, LOW);
         delayMicroseconds(2); // delays are too small for vTaskDelay
-        Serial.print("b\n");
         // set trigpin to high for 10 us
         digitalWrite(sensor->trigPin, HIGH);
         delayMicroseconds(10);
         digitalWrite(sensor->trigPin, LOW);
-        Serial.print("c\n");
         // Reads the echoPin, returns the sound wave travel time in microseconds
-        return pulseIn(sensor->echoPin, HIGH, sensor->timeout); // configure timeout?
-        Serial.print("d\n");
+        //return pulseIn(sensor->echoPin, HIGH, sensor->timeout); // configure timeout?
+        return pulseIn(sensor->echoPin, HIGH, 5000) ; // configure timeout?
     }
 
     struct Param
@@ -84,26 +81,26 @@ namespace // hidden
         param->sensor_array[2] = dSensor;
 
         // misc config
-        param->sound_speed = 0.034;
+        param->sound_speed = 0.034;// cm/us
         param->interval = 0.500;
     }
 
     void getConstraints(struct Task_Constraints *cnst)
     {
         // set constraints here
-        cnst->xFirst = 0;                            /// [O] First activation
-        cnst->xWcet = 3000;                          /// [C] Worst-case execution time //unused?//
-        cnst->xPeriod = 10 / portTICK_PERIOD_MS;   /// [T] Period
-        cnst->xDeadline = 4000 / portTICK_PERIOD_MS; /// [D] Deadline
+        cnst->xFirst = 0       / portTICK_PERIOD_MS; /// [O] First activation
+        cnst->xWcet = 30         / portTICK_PERIOD_MS; /// [C] Worst-case execution time //unused?//
+        cnst->xPeriod = 200      / portTICK_PERIOD_MS; /// [T] Period
+        cnst->xDeadline = 5000    / portTICK_PERIOD_MS; /// [D] Deadline
     }
 
     void getInformation(struct Task_Information *info)
     {
         // set variables here
         info->name = "SensorTask";
-        info->usStackDepth = 2000;
+        info->usStackDepth = 3000;
         info->pvParameters = (void *)1;
-        info->uxPriority = 1;
+        info->uxPriority = 3;
         info->pvCreatedTask = NULL;
     }
 
@@ -114,13 +111,6 @@ namespace // hidden
 
         for (int i = 0; i < param->sensor_count; i++)
         {
-            if (TASKDEBUG)
-            {
-                Serial.print("trigPin:");
-                Serial.print((int)sensor_array[i]->trigPin);
-                Serial.print("\nechoPin:");
-                Serial.println((int)sensor_array[i]->echoPin);
-            }
             pinMode(sensor_array[i]->trigPin, OUTPUT); // Sets the trigPin as an Output
             pinMode(sensor_array[i]->echoPin, INPUT);
         }
@@ -133,27 +123,27 @@ namespace // hidden
 
         for (int i = 0; i < param->sensor_count; i++)
         {
-            if (TASKDEBUG)
+            param->s_DistanceArray[i] = Measure(sensor_array[i])* param->sound_speed / 2;
+            if(param->s_DistanceArray[i] == 0)
             {
-                Serial.print("trigPin:");
-                Serial.println(sensor_array[i]->trigPin);
-                Serial.print("echoPin:");
-                Serial.println(sensor_array[i]->echoPin);
+                param->s_DistanceArray[i] = 100;
             }
-            param->s_DistanceArray[i] = //rand()%100;
-                Measure(sensor_array[i]) * param->sound_speed / 2;
+
             if (TASKDEBUG)
             {
-                Serial.print("distance :");
-                Serial.println(param->s_DistanceArray[i]);
+                Serial.print("[");
+                Serial.print(param->s_DistanceArray[i]);
+                Serial.print("]");
             }
         }
+        if (TASKDEBUG)
+        Serial.print("\n");
         // signal to control that reading are ready
-        if (TASKDEBUG)
-            Serial.print("\nsetting ready flag\n");
+        //if (TASKDEBUG)
+        //    Serial.print("\nsetting ready flag\n");
         *(param->s_SensorReady) = true;
-        if (TASKDEBUG)
-            Serial.print("done setting ready flag\n");
+        //if (TASKDEBUG)
+        //   Serial.print("done setting ready flag\n");
     }
 }
 

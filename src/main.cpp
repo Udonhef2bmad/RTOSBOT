@@ -57,18 +57,20 @@ void setup()
 
     struct Unified_Task *uTask;
 
-    /*uTask = InitSensorTask(
+    uTask = InitSensorTask(
         &s_SensorReady, m_SensorReady,
         s_DistanceArray, m_DistanceArray,
         s_DisplayContent, m_DisplayContent);
     CreateTask(uTask); //*/
 
+    
     uTask = InitMotorTask(
         s_MotorOutputs, m_MotorOutputs,
-        s_DisplayContent, m_DisplayContent);//*/
-    CreateTask(uTask);
+        s_DisplayContent, m_DisplayContent);
+    CreateTask(uTask);//*/
+    
 
-    /*uTask = InitControlTask(
+    uTask = InitControlTask(
         &s_SensorReady, m_SensorReady,
         s_DistanceArray, m_DistanceArray,
         s_MotorOutputs, m_MotorOutputs,

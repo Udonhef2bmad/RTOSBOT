@@ -2,7 +2,7 @@
 
 namespace // hidden
 {
-    bool TASKDEBUG = true;
+    bool TASKDEBUG = false;
 
     // pin definition for ld293d H-bridge-driven motor
     struct Motor
@@ -66,11 +66,11 @@ namespace // hidden
             Serial.print(":");
             Serial.print(!m2_dir);
             Serial.print("]\n");*/
-            Serial.print("speed\n[");
+            /*Serial.print("speed\n[");
             Serial.print(2*abs((m1_input) - (param->inputMean)));
             Serial.print(":");
             Serial.print(2*abs((m2_input) - (param->inputMean)));
-            Serial.print("]\n");
+            Serial.print("]\n");*/
             Serial.print("speed%\n[");
             Serial.print(2*abs((m1_input) - (param->inputMean)) / (param->inputMax - param->inputMin));
             Serial.print(":");
@@ -86,7 +86,7 @@ namespace // hidden
         param->inputMax = 255;                                      // 16 bit resolution -> 65536 possible values
         param->inputMean = (param->inputMin + param->inputMax) / 2; // stored here as to avoid calculation every loop
         param->resolution = 8;
-        param->freq = 4000;
+        param->freq = 40000;
 
         // allocate 2 dual motor array
 
@@ -115,13 +115,13 @@ namespace // hidden
         param->motor[1] = motor;
     }
 
-    void getConstraints(struct Task_Constraints *cnst)
+        void getConstraints(struct Task_Constraints *cnst)
     {
         // set constraints here
-        cnst->xFirst = 0;                           /// [O] First activation
-        cnst->xWcet = 0;                            /// [C] Worst-case execution time //unused?//
-        cnst->xPeriod = 500 / portTICK_PERIOD_MS;   /// [T] Period
-        cnst->xDeadline = 500 / portTICK_PERIOD_MS; /// [D] Deadline
+        cnst->xFirst = 100      / portTICK_PERIOD_MS; /// [O] First activation
+        cnst->xWcet = 5         / portTICK_PERIOD_MS; /// [C] Worst-case execution time //unused?//
+        cnst->xPeriod = 50      / portTICK_PERIOD_MS; /// [T] Period
+        cnst->xDeadline = 10    / portTICK_PERIOD_MS; /// [D] Deadline
     }
 
     void getInformation(struct Task_Information *info)
@@ -160,8 +160,9 @@ namespace // hidden
     void uLoop(void *pvParameters)
     {
         struct Param *param = (struct Param *)pvParameters;
-        param->s_MotorOutputs[0] = (param->s_MotorOutputs[0]+5)%255;
-        param->s_MotorOutputs[1] = (param->s_MotorOutputs[1]-5)%255;
+        //decay command over time
+        //param->s_MotorOutputs[0] = (param->s_MotorOutputs[0]+5)%255;
+        //param->s_MotorOutputs[1] = (param->s_MotorOutputs[1]+5)%255;
         dualDrive_update(param, param->s_MotorOutputs[0], param->s_MotorOutputs[1]);
     }
 }

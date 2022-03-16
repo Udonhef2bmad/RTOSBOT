@@ -77,8 +77,7 @@ void taskLoop(void *pvParameters)
     while (1)
     {
         // error handler
-        if (DEBUG)
-            Serial.println("error");
+        Serial.println("error");
         delay(1000);
     }
 }
