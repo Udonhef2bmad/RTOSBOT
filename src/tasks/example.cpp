@@ -8,10 +8,9 @@ namespace // hidden
         int test;
     };
 
- 
     void getParameters(struct Param *param)
     {
-        //set parameters here
+        // set parameters here
         param->test = 10;
     }
 
@@ -28,16 +27,15 @@ namespace // hidden
     {
         // set variables here
         info->name = "ExampleTask";
-        info->usStackDepth = 1000; 
+        info->usStackDepth = 1000;
         info->pvParameters = (void *)1;
         info->uxPriority = tskIDLE_PRIORITY;
         info->pvCreatedTask = NULL;
     }
 
-
     void uSetup(void *pvParameters)
     {
-        //nothing to do
+        // nothing to do
     }
 
     void uLoop(void *pvParameters)
@@ -51,10 +49,10 @@ namespace // hidden
 
 struct Unified_Task *InitExampleTask()
 {
-    struct Unified_Task *uTask      = (struct Unified_Task *)malloc(sizeof *uTask);
-    struct Task_Information *info   = (struct Task_Information *)malloc(sizeof *info);
-    struct Task_Constraints *cnst   = (struct Task_Constraints *)malloc(sizeof *cnst);
-    struct Param *param             = (struct Param *)malloc(sizeof *param);
+    struct Unified_Task *uTask = (struct Unified_Task *)malloc(sizeof *uTask);
+    struct Task_Information *info = (struct Task_Information *)malloc(sizeof *info);
+    struct Task_Constraints *cnst = (struct Task_Constraints *)malloc(sizeof *cnst);
+    struct Param *param = (struct Param *)malloc(sizeof *param);
 
     // init setup funtion
     uTask->uSetup = uSetup;

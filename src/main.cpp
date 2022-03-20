@@ -38,9 +38,9 @@ void setup()
 
 
     //// shared between SensorTask and ControlTask
-    bool s_SensorReady;               // shared variable that signals compute task to run
-    unsigned long s_DistanceArray[3]; // shared variable holding sensor distances
-    SemaphoreHandle_t m_SensorReady;  // mutex for s_SensorReady
+    bool s_SensorReady;                // shared variable that signals compute task to run
+    unsigned long s_DistanceArray[3];  // shared variable holding sensor distances
+    SemaphoreHandle_t m_SensorReady;   // mutex for s_SensorReady
     SemaphoreHandle_t m_DistanceArray; // mutex for s_distance_array
     m_SensorReady = xSemaphoreCreateMutex();
     m_DistanceArray = xSemaphoreCreateMutex();
@@ -63,25 +63,23 @@ void setup()
         s_DisplayContent, m_DisplayContent);
     CreateTask(uTask); //*/
 
-    
     uTask = InitMotorTask(
         s_MotorOutputs, m_MotorOutputs,
         s_DisplayContent, m_DisplayContent);
-    CreateTask(uTask);//*/
-    
+    CreateTask(uTask); //*/
 
     uTask = InitControlTask(
         &s_SensorReady, m_SensorReady,
         s_DistanceArray, m_DistanceArray,
         s_MotorOutputs, m_MotorOutputs,
         s_DisplayContent, m_DisplayContent);
-    CreateTask(uTask);//*/
+    CreateTask(uTask); //*/
 
     Serial.println("Done");
 }
 
 void loop()
 {
-    //Serial.printf("Task loop() %d\n", xPortGetCoreID());
+    // Serial.printf("Task loop() %d\n", xPortGetCoreID());
     delay(10000);
 }

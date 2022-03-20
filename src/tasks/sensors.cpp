@@ -24,8 +24,8 @@ namespace // hidden
         delayMicroseconds(10);
         digitalWrite(sensor->trigPin, LOW);
         // Reads the echoPin, returns the sound wave travel time in microseconds
-        //return pulseIn(sensor->echoPin, HIGH, sensor->timeout); // configure timeout?
-        return pulseIn(sensor->echoPin, HIGH, 5000) ; // configure timeout?
+        // return pulseIn(sensor->echoPin, HIGH, sensor->timeout); // configure timeout?
+        return pulseIn(sensor->echoPin, HIGH, 5000); // configure timeout?
     }
 
     struct Param
@@ -38,7 +38,7 @@ namespace // hidden
 
         unsigned long *s_DistanceArray;    // shared array holding measured distances
         SemaphoreHandle_t m_DistanceArray; // mutex for s_DistanceArray
-        
+
         bool *s_SensorReady;             // shared variable that signals compute task to run
         SemaphoreHandle_t m_SensorReady; // mutex for s_SensorReady
 
@@ -81,17 +81,17 @@ namespace // hidden
         param->sensor_array[2] = dSensor;
 
         // misc config
-        param->sound_speed = 0.034;// cm/us
+        param->sound_speed = 0.034; // cm/us
         param->interval = 0.500;
     }
 
     void getConstraints(struct Task_Constraints *cnst)
     {
         // set constraints here
-        cnst->xFirst = 0       / portTICK_PERIOD_MS; /// [O] First activation
-        cnst->xWcet = 30         / portTICK_PERIOD_MS; /// [C] Worst-case execution time //unused?//
-        cnst->xPeriod = 200      / portTICK_PERIOD_MS; /// [T] Period
-        cnst->xDeadline = 5000    / portTICK_PERIOD_MS; /// [D] Deadline
+        cnst->xFirst = 0 / portTICK_PERIOD_MS;     /// [O] First activation
+        cnst->xWcet = 30 / portTICK_PERIOD_MS;     /// [C] Worst-case execution time //unused?//
+        cnst->xPeriod = 50 / portTICK_PERIOD_MS;   /// [T] Period
+        cnst->xDeadline = 50 / portTICK_PERIOD_MS; /// [D] Deadline
     }
 
     void getInformation(struct Task_Information *info)
@@ -123,8 +123,8 @@ namespace // hidden
 
         for (int i = 0; i < param->sensor_count; i++)
         {
-            param->s_DistanceArray[i] = Measure(sensor_array[i])* param->sound_speed / 2;
-            if(param->s_DistanceArray[i] == 0)
+            param->s_DistanceArray[i] = Measure(sensor_array[i]) * param->sound_speed / 2;
+            if (param->s_DistanceArray[i] == 0)
             {
                 param->s_DistanceArray[i] = 100;
             }
@@ -137,19 +137,19 @@ namespace // hidden
             }
         }
         if (TASKDEBUG)
-        Serial.print("\n");
+            Serial.print("\n");
         // signal to control that reading are ready
-        //if (TASKDEBUG)
+        // if (TASKDEBUG)
         //    Serial.print("\nsetting ready flag\n");
         *(param->s_SensorReady) = true;
-        //if (TASKDEBUG)
-        //   Serial.print("done setting ready flag\n");
+        // if (TASKDEBUG)
+        //    Serial.print("done setting ready flag\n");
     }
 }
 
 struct Unified_Task *InitSensorTask(
     bool *s_SensorReady, SemaphoreHandle_t m_SensorReady,
-    unsigned long* s_DistanceArray, SemaphoreHandle_t m_DistanceArray,
+    unsigned long *s_DistanceArray, SemaphoreHandle_t m_DistanceArray,
     char *s_DisplayContent, SemaphoreHandle_t m_DisplayContent)
 {
     struct Unified_Task *uTask = (struct Unified_Task *)malloc(sizeof *uTask);
@@ -160,8 +160,8 @@ struct Unified_Task *InitSensorTask(
     // init shared variables here
     param->s_SensorReady = s_SensorReady;
     param->m_SensorReady = m_SensorReady;
-    param-> s_DistanceArray = s_DistanceArray;
-    param-> m_DistanceArray = m_DistanceArray;
+    param->s_DistanceArray = s_DistanceArray;
+    param->m_DistanceArray = m_DistanceArray;
     param->s_DisplayContent = s_DisplayContent;
     param->m_DisplayContent = m_DisplayContent;
 
